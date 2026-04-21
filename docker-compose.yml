@@ -2,19 +2,30 @@ services:
   db:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: miniblog
-      MYSQL_USER: bloguser
-      MYSQL_PASSWORD: blogpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - ${DB_PORT}:3306
     volumes:
       - db_data:/var/lib/mysql
       - ./sql:/docker-entrypoint-initdb.d/:ro
   app:
     image: php:8.2-apache
+    command: 
+       bash -c "
+        apt-get update &&
+        apt-get install -y msmtp &&
+        docker-php-ext-install pdo_mysql &&
+        echo 'host mailhog' > /etc/msmtprc &&
+        echo 'port 1025' >> /etc/msmtprc &&
+        echo 'from webmaster@miniblog.local' >> /etc/msmtprc &&
+        echo 'sendmail_path=/usr/bin/msmtp -t' > /usr/local/etc/php/conf.d/mail.ini &&
+        apache2-foreground"
+
     ports:
-      - "8080:80"
+      - ${APP_PORT}:80
     volumes:
       - ./app:/var/www/html
     environment:
@@ -22,8 +33,29 @@ services:
       DB_NAME: miniblog
       DB_USER: bloguser
       DB_PASSWORD: blogpass
+      SMTP_HOST: mailhog
+      SMTP_PORT: ${MAILHOG_1_PORT}
     depends_on:
       - db
+  phpmyadmin:
+    image: phpmyadmin:latest
+
+    ports:
+      - ${PHP_PORT}:80
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+    depends_on:
+      - db
+  mailhog:
+    image: mailhog/mailhog:latest
+    
+    ports:
+      - ${MAILHOG_1_PORT}:${MAILHOG_1_PORT}
+      - ${MAILHOG_2_PORT}:${MAILHOG_2_PORT}
+
+
 
 volumes:
   db_data:
