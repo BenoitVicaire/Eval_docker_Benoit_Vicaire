@@ -1,0 +1,29 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: miniblog
+      MYSQL_USER: bloguser
+      MYSQL_PASSWORD: blogpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d/:ro
+  app:
+    image: php:8.2-apache
+    ports:
+      - "8080:80"
+    volumes:
+      - ./app:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_NAME: miniblog
+      DB_USER: bloguser
+      DB_PASSWORD: blogpass
+    depends_on:
+      - db
+
+volumes:
+  db_data:
